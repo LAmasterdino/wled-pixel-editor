@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WLED Pixel Art Studio</title>
+<style>
+:root{--bg:#111318;--panel:#1b1e26;--panel2:#242936;--line:#343a48;--text:#f2f4f8;--muted:#9da5b5;--accent:#66d9ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px system-ui,-apple-system,Segoe UI,sans-serif}
+header{height:58px;display:flex;align-items:center;gap:14px;padding:0 18px;border-bottom:1px solid var(--line);background:#15171d}
+.logo{font-weight:800;letter-spacing:.3px}.badge{font-size:11px;color:#071017;background:var(--accent);padding:3px 7px;border-radius:999px;font-weight:800}
+.app{display:grid;grid-template-columns:250px 1fr 280px;height:calc(100vh - 58px);min-height:620px}
+aside{background:var(--panel);padding:14px;border-right:1px solid var(--line);overflow:auto}
+.right{border-left:1px solid var(--line);border-right:0}
+.section{margin-bottom:18px}.section h3{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:0 0 9px}
+.row{display:flex;gap:7px;align-items:center;margin:7px 0}.row>*{min-width:0}
+button,select,input{font:inherit}button,select,.num{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:7px;padding:7px 9px}
+button{cursor:pointer}button:hover{border-color:#596276}button.active{border-color:var(--accent);box-shadow:0 0 0 1px #66d9ff33 inset}
+button.primary{background:#1c5263;border-color:#2f879f}.danger{color:#ff9e9e}
+input[type=number]{width:78px}.color{width:42px;height:34px;padding:2px}
+.toolgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}.toolgrid button{min-height:38px}
+.swatches{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}.swatch{height:25px;border:1px solid #555;border-radius:4px;cursor:pointer}
+main{display:flex;flex-direction:column;min-width:0}.toolbar{height:52px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:7px;padding:8px;flex-wrap:wrap}
+.stage{flex:1;display:flex;align-items:center;justify-content:center;overflow:auto;padding:22px;background:
+radial-gradient(circle at 50% 40%,#1d2230 0,#13151b 52%,#0e1014 100%)}
+#canvas{image-rendering:pixelated;image-rendering:crisp-edges;box-shadow:0 18px 60px #0009;border:1px solid #4a5060;cursor:crosshair}
+.hint{color:var(--muted);font-size:12px}.frames{height:142px;border-top:1px solid var(--line);background:#15171d;padding:8px;overflow:auto;display:flex;gap:8px}
+.frame{width:94px;flex:0 0 94px;background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:5px;cursor:pointer}
+.frame.sel{border-color:var(--accent)}.frame canvas{width:82px;height:82px;image-rendering:pixelated;display:block;background:#0c0d10}.frame small{display:block;margin-top:4px;color:var(--muted);text-align:center}
+label{color:var(--muted);font-size:12px;display:block;margin-bottom:3px}
+.value{color:var(--text);font-weight:700}.split{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+kbd{border:1px solid var(--line);background:#101217;padding:1px 5px;border-radius:4px;color:#cbd1dd}
+#toast{position:fixed;right:18px;bottom:18px;background:#242936;border:1px solid #495267;padding:10px 13px;border-radius:8px;display:none;z-index:5}
+@media(max-width:1000px){.app{grid-template-columns:200px 1fr}.right{display:none}}
+@media(max-width:720px){.app{display:block;height:auto}.app aside{display:none}main{height:calc(100vh - 58px)}.frames{height:120px}.frame{width:78px}.frame canvas{width:66px;height:66px}}
+</style>
+</head>
+<body>
+<header><div class="logo">WLED Pixel Art Studio</div><span class="badge">GitHub Pages</span><span class="hint">Pixel-perfect Editor · Animation · WLED Export</span></header>
+<div class="app">
+<aside>
+ <div class="section"><h3>Format</h3>
+  <div class="split"><div><label>Breite</label><input id="w" type="number" min="1" max="256" value="16"></div><div><label>Höhe</label><input id="h" type="number" min="1" max="256" value="16"></div></div>
+  <div class="row"><button id="resize" class="primary">Neues Format</button></div>
+ </div>
+ <div class="section"><h3>Werkzeuge</h3>
+  <div class="toolgrid">
+   <button data-tool="pencil" class="active">✏️ Stift</button><button data-tool="eraser">⌫ Radierer</button>
+   <button data-tool="fill">🪣 Füllen</button><button data-tool="picker">💉 Pipette</button>
+   <button data-tool="line">╱ Linie</button><button data-tool="rect">□ Rechteck</button>
+   <button data-tool="eyedrop">◉ Pick + Draw</button><button id="clear">🗑 Leeren</button>
+  </div>
+ </div>
+ <div class="section"><h3>Farbe</h3><div class="row"><input id="color" class="color" type="color" value="#ffffff"><input id="hex" value="#ffffff" maxlength="7"></div>
+  <div class="swatches" id="swatches"></div>
+ </div>
+ <div class="section"><h3>Pinsel</h3><div class="row"><label style="margin:0">Größe</label><input id="size" type="range" min="1" max="8" value="1"><span id="sizev" class="value">1</span></div>
+  <div class="row"><label style="margin:0">Zoom</label><input id="zoom" type="range" min="8" max="40" value="24"><span id="zoomv" class="value">24×</span></div>
+ </div>
+ <div class="section"><h3>Ansicht</h3><div class="row"><button id="grid" class="active">Raster</button><button id="checker">Transparenz</button></div></div>
+ <div class="section"><h3>Tastatur</h3><div class="hint"><kbd>B</kbd> Stift · <kbd>E</kbd> Radierer · <kbd>G</kbd> Füllen · <kbd>I</kbd> Pipette · <kbd>Ctrl+Z</kbd> Undo · <kbd>Ctrl+Y</kbd> Redo</div></div>
+</aside>
+
+<main>
+ <div class="toolbar">
+  <button id="undo">↶ Undo</button><button id="redo">↷ Redo</button><span style="flex:1"></span>
+  <button id="import">Bild importieren</button><button id="png">PNG</button><button id="wled">WLED JSON</button><button id="gif" class="primary">GIF exportieren</button>
+  <input id="file" type="file" accept="image/*,.json" hidden>
+ </div>
+ <div class="stage"><canvas id="canvas"></canvas></div>
+ <div class="frames" id="frames"></div>
+</main>
+
+<aside class="right">
+ <div class="section"><h3>Animation</h3>
+  <div class="row"><button id="add" class="primary">＋ Frame</button><button id="dup">Frame duplizieren</button></div>
+  <div class="row"><button id="del" class="danger">Frame löschen</button></div>
+  <div class="row"><label style="margin:0">FPS</label><input id="fps" type="number" min="1" max="60" value="10"><span class="hint">pro Sekunde</span></div>
+  <div class="row"><button id="play">▶ Vorschau</button><button id="stop">■ Stop</button></div>
+ </div>
+ <div class="section"><h3>WLED Matrix</h3>
+  <label>LED-Anordnung</label><select id="mapping"><option value="row">Zeile: links → rechts</option><option value="serpentine">Serpentine / Zickzack</option><option value="col">Spalte: oben → unten</option><option value="serpentineCol">Serpentine Spalten</option></select>
+  <label style="margin-top:9px">JSON-Modus</label><select id="jsonmode"><option value="state">WLED State JSON</option><option value="pixels">Pixel-Daten JSON</option></select>
+  <p class="hint">Der State-Export erzeugt ein direkt nutzbares <code>/json/state</code>-Payload mit einer Segment-Farbliste. Pixel-Daten enthält zusätzlich Breite, Höhe und Mapping.</p>
+ </div>
+ <div class="section"><h3>Projekt</h3>
+  <button id="save">Projekt JSON speichern</button><button id="load" style="margin-top:7px">Projekt JSON laden</button>
+  <input id="projectFile" type="file" accept=".json" hidden>
+ </div>
+ <div class="section"><h3>Status</h3><div class="hint" id="status"></div></div>
+</aside>
+</div>
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+let W=16,H=16, zoom=24, tool='pencil', brush=1, color='#ffffff', grid=true, checker=false;
+let frames=[new Uint32Array(W*H)], current=0, undoStack=[], redoStack=[], drawing=false, startCell=null, previewTimer=null;
+const canvas=$('canvas'), ctx=canvas.getContext('2d');
+
+const palette=['#000000','#ffffff','#ff3b30','#ff9500','#ffcc00','#34c759','#00c7be','#32ade6','#007aff','#5856d6','#af52de','#ff2d55','#7f5af0','#5ac8fa','#8e8e93','#a2845e','#5a5a5a','#c7c7cc'];
+palette.forEach(c=>{const b=document.createElement('div');b.className='swatch';b.style.background=c;b.title=c;b.onclick=()=>setColor(c);$('swatches').appendChild(b)});
+
+function hexToInt(h){h=h.replace('#','');return parseInt(h.padEnd(6,'0').slice(0,6)+'ff',16)>>>0}
+function intToHex(v){return '#'+(v>>>8).toString(16).padStart(6,'0')}
+function setColor(c){color=c; $('color').value=c; $('hex').value=c}
+function toast(t){$('toast').textContent=t;$('toast').style.display='block';clearTimeout(window.tt);window.tt=setTimeout(()=>$('toast').style.display='none',1800)}
+function snapshot(){undoStack.push(frames[current].slice());if(undoStack.length>80)undoStack.shift();redoStack=[]}
+function resizeCanvas(){canvas.width=W*zoom;canvas.height=H*zoom;draw()}
+function draw(){
+ ctx.imageSmoothingEnabled=false; ctx.clearRect(0,0,canvas.width,canvas.height);
+ const f=frames[current];
+ if(checker){for(let y=0;y<H;y++)for(let x=0;x<W;x++){ctx.fillStyle=(x+y)%2?'#1d2028':'#151820';ctx.fillRect(x*zoom,y*zoom,zoom,zoom)}}
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){let v=f[y*W+x];if((v>>>24)!==0){ctx.fillStyle=intToHex(v);ctx.fillRect(x*zoom,y*zoom,zoom,zoom)}}
+ if(grid){ctx.strokeStyle='rgba(255,255,255,.10)';ctx.lineWidth=1;for(let x=0;x<=W;x++){ctx.beginPath();ctx.moveTo(x*zoom+.5,0);ctx.lineTo(x*zoom+.5,H*zoom);ctx.stroke()}for(let y=0;y<=H;y++){ctx.beginPath();ctx.moveTo(0,y*zoom+.5);ctx.lineTo(W*zoom,y*zoom+.5);ctx.stroke()}}
+ $('status').textContent=`${W} × ${H} px · ${frames.length} Frame${frames.length!==1?'s':''} · Frame ${current+1}`;
+}
+function cell(e){const r=canvas.getBoundingClientRect();return [Math.max(0,Math.min(W-1,Math.floor((e.clientX-r.left)*W/r.width))),Math.max(0,Math.min(H-1,Math.floor((e.clientY-r.top)*H/r.height)))]}
+function put(x,y,v){const s=Math.floor(brush/2);for(let yy=-s;yy<=s;yy++)for(let xx=-s;xx<=s;xx++){let X=x+xx,Y=y+yy;if(X>=0&&X<W&&Y>=0&&Y<H)frames[current][Y*W+X]=v}}
+function flood(x,y,v){const f=frames[current],i=y*W+x,target=f[i];if(target===v)return;let q=[[x,y]],seen=new Set([i]);while(q.length){let [a,b]=q.pop(),k=b*W+a;f[k]=v;for(const [nx,ny] of [[a+1,b],[a-1,b],[a,b+1],[a,b-1]])if(nx>=0&&nx<W&&ny>=0&&ny<H){let n=ny*W+nx;if(!seen.has(n)&&f[n]===target){seen.add(n);q.push([nx,ny])}}}}
+function line(x0,y0,x1,y1,v){let dx=Math.abs(x1-x0),sx=x0<x1?1:-1,dy=-Math.abs(y1-y0),sy=y0<y1?1:-1,err=dx+dy;for(;;){put(x0,y0,v);if(x0===x1&&y0===y1)break;let e=2*err;if(e>=dy){err+=dy;x0+=sx}if(e<=dx){err+=dx;y0+=sy}}}
+function rect(x0,y0,x1,y1,v){let xa=Math.min(x0,x1),xb=Math.max(x0,x1),ya=Math.min(y0,y1),yb=Math.max(y0,y1);for(let x=xa;x<=xb;x++){put(x,ya,v);put(x,yb,v)}for(let y=ya;y<=yb;y++){put(xa,y,v);put(xb,y,v)}}
+canvas.addEventListener('pointerdown',e=>{e.preventDefault();drawing=true;startCell=cell(e);snapshot();let [x,y]=startCell;if(tool==='picker'||tool==='eyedrop'){setColor(intToHex(frames[current][y*W+x]));if(tool==='picker'){drawing=false;return}}if(tool==='fill')flood(x,y,hexToInt(color));else if(tool==='pencil'||tool==='eyedrop')put(x,y,hexToInt(color));else if(tool==='eraser')put(x,y,0);draw()});
+canvas.addEventListener('pointermove',e=>{if(!drawing)return;let [x,y]=cell(e);if(tool==='pencil'||tool==='eyedrop')put(x,y,hexToInt(color));else if(tool==='eraser')put(x,y,0);draw()});
+window.addEventListener('pointerup',e=>{if(!drawing)return;drawing=false;let [x,y]=cell(e);if(startCell&&(tool==='line'||tool==='rect')){if(tool==='line')line(...startCell,x,y,hexToInt(color));else rect(...startCell,x,y,hexToInt(color));draw()}});
+document.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>{tool=b.dataset.tool;document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x===b))});
+$('color').oninput=e=>setColor(e.target.value);$('hex').onchange=e=>{if(/^#[0-9a-f]{6}$/i.test(e.target.value))setColor(e.target.value)};
+$('size').oninput=e=>{brush=+e.target.value;$('sizev').textContent=brush};$('zoom').oninput=e=>{zoom=+e.target.value;$('zoomv').textContent=zoom+'×';resizeCanvas()};
+$('grid').onclick=()=>{grid=!grid;$('grid').classList.toggle('active',grid);draw()};$('checker').onclick=()=>{checker=!checker;$('checker').classList.toggle('active',checker);draw()};
+$('undo').onclick=()=>{if(undoStack.length){redoStack.push(frames[current].slice());frames[current]=undoStack.pop();draw()}};$('redo').onclick=()=>{if(redoStack.length){undoStack.push(frames[current].slice());frames[current]=redoStack.pop();draw()}};
+$('clear').onclick=()=>{snapshot();frames[current].fill(0);draw()};
+$('resize').onclick=()=>{let nw=Math.max(1,Math.min(256,+$('w').value)),nh=Math.max(1,Math.min(256,+$('h').value));W=nw;H=nh;frames=[new Uint32Array(W*H)];current=0;undoStack=[];redoStack=[];resizeCanvas();renderFrames();toast('Neues Format erstellt')};
+
+function renderFrames(){const box=$('frames');box.innerHTML='';frames.forEach((f,i)=>{let d=document.createElement('div');d.className='frame'+(i===current?' sel':'');let c=document.createElement('canvas');c.width=W;c.height=H;let cx=c.getContext('2d');for(let y=0;y<H;y++)for(let x=0;x<W;x++){let v=f[y*W+x];if(v>>>24){cx.fillStyle=intToHex(v);cx.fillRect(x,y,1,1)}}d.append(c);let s=document.createElement('small');s.textContent=`Frame ${i+1}`;d.append(s);d.onclick=()=>{current=i;undoStack=[];redoStack=[];draw();renderFrames()};box.append(d)})}
+$('add').onclick=()=>{frames.splice(current+1,0,new Uint32Array(W*H));current++;undoStack=[];redoStack=[];draw();renderFrames()};$('dup').onclick=()=>{frames.splice(current+1,0,frames[current].slice());current++;undoStack=[];redoStack=[];draw();renderFrames()};$('del').onclick=()=>{if(frames.length===1){frames[0].fill(0)}else{frames.splice(current,1);current=Math.max(0,current-1)}undoStack=[];redoStack=[];draw();renderFrames()};
+$('fps').onchange=()=>{$('fps').value=Math.max(1,Math.min(60,+$('fps').value||10))};
+function frameCanvas(f){let c=document.createElement('canvas');c.width=W;c.height=H;let x=c.getContext('2d');for(let y=0;y<H;y++)for(let i=0;i<W;i++){let v=f[y*W+i];if(v>>>24){x.fillStyle=intToHex(v);x.fillRect(i,y,1,1)}}return c}
+$('png').onclick=()=>downloadCanvas(frameCanvas(frames[current]),`pixel-art-${W}x${H}.png`,1);
+function downloadCanvas(c,name,scale=1){let a=document.createElement('a');a.href=c.toDataURL('image/png');a.download=name;a.click()}
+function orderedPixels(f){let out=[];const map=$('mapping').value;if(map==='row'||map==='serpentine'){for(let y=0;y<H;y++){let rev=map==='serpentine'&&y%2;for(let xx=0;xx<W;xx++){let x=rev?W-1-xx:xx;let v=f[y*W+x];out.push([(v>>>24)?(v>>24)&255:0,(v>>>16)&255,(v>>8)&255,v&255])}}}else{for(let x=0;x<W;x++){let rev=map==='serpentineCol'&&x%2;for(let yy=0;yy<H;yy++){let y=rev?H-1-yy:yy;let v=f[y*W+x];out.push([(v>>>24)?(v>>24)&255:0,(v>>>16)&255,(v>>8)&255,v&255])}}}return out}
+$('wled').onclick=()=>{let pix=orderedPixels(frames[current]);let payload=$('jsonmode').value==='state'?{on:true,seg:[{start:0,stop:pix.length,col:pix.map(p=>p.slice(0,3)),fx:0}]}:{width:W,height:H,mapping:$('mapping').value,frames:frames.map(orderedPixels),fps:+$('fps').value};let blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`wled-pixel-${W}x${H}.json`;a.click();URL.revokeObjectURL(a.href);toast('WLED JSON exportiert')};
+$('gif').onclick=()=>{if(typeof GIF==='undefined'){toast('GIF-Bibliothek konnte nicht geladen werden');return}let g=new GIF({workers:2,quality:10,width:W,height:H,workerScript:'https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js'});frames.forEach(f=>g.addFrame(frameCanvas(f),{delay:1000/+$('fps').value,copy:true}));g.on('finished',blob=>{let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`wled-animation-${W}x${H}.gif`;a.click();toast('GIF exportiert')});toast('GIF wird gerendert…');g.render()};
+$('import').onclick=()=>$('file').click();$('file').onchange=async e=>{let f=e.target.files[0];if(!f)return;if(f.name.endsWith('.json')){try{let o=JSON.parse(await f.text());if(o.width&&o.height&&o.frames){W=o.width;H=o.height;frames=o.frames.map(a=>Uint32Array.from(a));current=0;resizeCanvas();renderFrames();toast('Projekt geladen')}}catch{toast('Ungültige JSON-Datei')}return}let im=new Image();im.onload=()=>{W=im.naturalWidth;H=im.naturalHeight;let c=document.createElement('canvas');c.width=W;c.height=H;c.getContext('2d').drawImage(im,0,0);let d=c.getContext('2d').getImageData(0,0,W,H).data,f=new Uint32Array(W*H);for(let i=0;i<f.length;i++)f[i]=((d[i*4]<<24)|(d[i*4+1]<<16)|(d[i*4+2]<<8)|d[i*4+3])>>>0;frames=[f];current=0;resizeCanvas();renderFrames();toast('Bild importiert')};im.src=URL.createObjectURL(f)};
+$('save').onclick=()=>{let o={version:1,width:W,height:H,fps:+$('fps').value,mapping:$('mapping').value,frames:frames.map(a=>Array.from(a))};let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(o)],{type:'application/json'}));a.download='wled-pixel-art-project.json';a.click()};
+$('load').onclick=()=>$('projectFile').click();$('projectFile').onchange=async e=>{$('file').files=e.target.files;$('file').dispatchEvent(new Event('change'))};
+$('play').onclick=()=>{if(previewTimer)clearInterval(previewTimer);let i=current;previewTimer=setInterval(()=>{current=(current+1)%frames.length;draw();renderFrames()},1000/+$('fps').value)};$('stop').onclick=()=>{clearInterval(previewTimer);previewTimer=null};
+window.onkeydown=e=>{if(['INPUT','SELECT'].includes(document.activeElement.tagName))return;let k=e.key.toLowerCase();if((e.ctrlKey||e.metaKey)&&k==='z'){e.preventDefault();$('undo').click()}else if((e.ctrlKey||e.metaKey)&&k==='y'){e.preventDefault();$('redo').click()}else if(k==='b')document.querySelector('[data-tool=pencil]').click();else if(k==='e')document.querySelector('[data-tool=eraser]').click();else if(k==='g')document.querySelector('[data-tool=fill]').click();else if(k==='i')document.querySelector('[data-tool=picker]').click()};
+resizeCanvas();renderFrames();
+</script>
+</body></html>
